@@ -1,0 +1,12 @@
+{
+	"name": "esp-update",
+	"version": "0.0.0",
+	"dependencies": [
+		{
+			"name": "semver",
+			"version": "https://github.com/chrisgavin/semver.c.git#bc5ad9cb1fa341a8dd51256df4630d74a613c1a5"
+		}
+	],
+	"frameworks": ["espidf"],
+	"platforms": ["espressif32"]
+}
