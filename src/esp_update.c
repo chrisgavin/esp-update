@@ -43,16 +43,20 @@ void esp_update(char update_server[], char application[], char current_version[]
 		.url = metadata_url,
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&metadata_http_config);
-	err = esp_http_client_perform(client);
+	err = esp_http_client_open(client, 0);
 
 	if (err != ESP_OK) {
 		ESP_LOGE(TAG, "Failed to perform HTTP request: %s", esp_err_to_name(err));
 		return;
 	}
 
-	const int status_code = esp_http_client_get_status_code(client);
-	const int content_length = esp_http_client_get_content_length(client);
+	const int content_length = esp_http_client_fetch_headers(client);
+	if (content_length <= 0) {
+		ESP_LOGE(TAG, "HTTP request failed. Content length was %d.", content_length);
+		return;
+	}
 
+	const int status_code = esp_http_client_get_status_code(client);
 	if (status_code < 200 || status_code > 299) {
 		ESP_LOGE(TAG, "HTTP request failed with status code %d.", status_code);
 		return;
@@ -60,9 +64,21 @@ void esp_update(char update_server[], char application[], char current_version[]
 	ESP_LOGI(TAG, "HTTP request succeeded with status code %d and content length %d.", status_code, content_length);
 
 	char response[content_length + 1];
-	int bytes_read = esp_http_client_read(client, response, content_length);
+	int bytes_read = esp_http_client_read_response(client, response, content_length);
+	if (bytes_read != content_length) {
+		ESP_LOGE(TAG, "Expected to read %d bytes, but actually read %d.", content_length, bytes_read);
+		return;
+	}
 	response[bytes_read] = 0;
-	ESP_LOGI(TAG, "Response was:\n%s", response);
+	ESP_LOGI(TAG, "Read response was:\n%s", response);
+
+	if (esp_http_client_is_complete_data_received(client)) {
+		ESP_LOGI(TAG, "Response read completely without errors.");
+	}
+	else {
+		ESP_LOGE(TAG, "Response was not read or had errors.");
+		return;
+	}
 
 	const cJSON* parsed = cJSON_Parse(response);
 	const char* update_version = cJSON_GetObjectItemCaseSensitive(parsed, "version")->valuestring;
