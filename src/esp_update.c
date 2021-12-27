@@ -33,18 +33,21 @@ esp_err_t esp_update(char update_server[], char application[], char current_vers
 
 	if (err != ESP_OK) {
 		ESP_LOGE(TAG, "Failed to perform HTTP request: %s", esp_err_to_name(err));
+		esp_http_client_cleanup(client);
 		return err;
 	}
 
 	const int content_length = esp_http_client_fetch_headers(client);
 	if (content_length <= 0) {
 		ESP_LOGE(TAG, "HTTP request failed. Content length was %d.", content_length);
+		esp_http_client_cleanup(client);
 		return ESP_FAIL;
 	}
 
 	const int status_code = esp_http_client_get_status_code(client);
 	if (status_code < 200 || status_code > 299) {
 		ESP_LOGE(TAG, "HTTP request failed with status code %d.", status_code);
+		esp_http_client_cleanup(client);
 		return ESP_FAIL;
 	}
 	ESP_LOGI(TAG, "HTTP request succeeded with status code %d and content length %d.", status_code, content_length);
@@ -53,6 +56,7 @@ esp_err_t esp_update(char update_server[], char application[], char current_vers
 	int bytes_read = esp_http_client_read_response(client, response, content_length);
 	if (bytes_read != content_length) {
 		ESP_LOGE(TAG, "Expected to read %d bytes, but actually read %d.", content_length, bytes_read);
+		esp_http_client_cleanup(client);
 		return ESP_FAIL;
 	}
 	response[bytes_read] = 0;
@@ -63,6 +67,7 @@ esp_err_t esp_update(char update_server[], char application[], char current_vers
 	}
 	else {
 		ESP_LOGE(TAG, "Response was not read or had errors.");
+		esp_http_client_cleanup(client);
 		return ESP_FAIL;
 	}
 
@@ -79,6 +84,7 @@ esp_err_t esp_update(char update_server[], char application[], char current_vers
 
 	if (semver_compare(parsed_current_version, parsed_update_version) >= 0) {
 		ESP_LOGI(TAG, "Already up to date.");
+		esp_http_client_cleanup(client);
 		return ESP_OK;
 	}
 
@@ -97,7 +103,8 @@ esp_err_t esp_update(char update_server[], char application[], char current_vers
 	}
 	else {
 		ESP_LOGE(TAG, "Firmware update failed with error %d.", err);
+		esp_http_client_cleanup(client);
 		return err;
 	}
-	return ESP_OK;
+	return esp_http_client_cleanup(client);
 }
