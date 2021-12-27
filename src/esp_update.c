@@ -1,49 +1,35 @@
-#include <stdio.h>
-#include "sdkconfig.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
-#include "esp_spi_flash.h"
-
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "esp_event.h"
-#include "esp_log.h"
-#include "esp_https_ota.h"
 #include <cJSON.h>
-#include <semver.h>
+#include <esp_event.h>
+#include <esp_https_ota.h>
+#include <esp_log.h>
+#include <esp_spi_flash.h>
+#include <esp_system.h>
+#include <esp_wifi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <sdkconfig.h>
+#include <stdio.h>
+
+#include "esp_serial.h"
+#include "semver.h"
 
 static const char *TAG = "ota";
 
-esp_err_t get_device_id(char* device_id, size_t device_id_size) {
-	uint8_t mac_address[6];
-	const esp_err_t err = esp_base_mac_addr_get(mac_address);
-	if (err != ESP_OK) {
-		return err;
-	}
-	snprintf(device_id, device_id_size, "%02x%02x%02x%02x%02x%02x", mac_address[0], mac_address[1], mac_address[2], mac_address[3], mac_address[4], mac_address[5]);
-	return err;
-}
-
 void esp_update(char update_server[], char application[], char current_version[]) {
-	char device_id[12];
-	esp_err_t err = get_device_id(device_id, sizeof(device_id));
-	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "Failed to get device ID: %s", esp_err_to_name(err));
-		return;
-	}
+	char serial[SERIAL_SIZE];
+	ESP_ERROR_CHECK(get_serial_string(serial));
 
-	ESP_LOGI(TAG, "Starting update... This is version %s with device id %s.", current_version, device_id);
+	ESP_LOGI(TAG, "Starting update... This is version %s with device id %s.", current_version, serial);
 
 	char metadata_url[256];
-	snprintf(metadata_url, sizeof(metadata_url), "%s/%s/latest.json?current_version=%s&device_id=%s", update_server, application, current_version, device_id);
+	snprintf(metadata_url, sizeof(metadata_url), "%s/%s/latest.json?current_version=%s&device_id=%s", update_server, application, current_version, serial);
 
 	ESP_LOGI(TAG, "Fetching latest version from %s...", metadata_url);
 	esp_http_client_config_t metadata_http_config = {
 		.url = metadata_url,
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&metadata_http_config);
-	err = esp_http_client_open(client, 0);
+	esp_err_t err = esp_http_client_open(client, 0);
 
 	if (err != ESP_OK) {
 		ESP_LOGE(TAG, "Failed to perform HTTP request: %s", esp_err_to_name(err));
