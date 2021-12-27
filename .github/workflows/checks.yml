@@ -1,0 +1,29 @@
+name: "Checks"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  checks:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Native Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build
+      - name: Setup Python
+        uses: actions/setup-python@v2
+      - name: Setup Python Dependencies
+        run: pip3 install --upgrade platformio
+      - name: Build
+        run: |
+          for example in ./examples/*/; do
+            pio ci --lib . --project-conf "$example/platformio.ini" "$example"
+          done
