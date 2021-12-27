@@ -8,7 +8,7 @@
 		},
 		{
 			"name": "esp-serial",
-			"version": "https://github.com/chrisgavin/esp-serial.git#f23729e980f51426e5f568a6277cbaee342dc8fa"
+			"version": "https://github.com/chrisgavin/esp-serial.git#1a98f89d1638ec371fe258567a3b780cb708b8bf"
 		}
 	],
 	"frameworks": ["espidf"],
