@@ -15,7 +15,7 @@
 
 static const char *TAG = "ota";
 
-void esp_update(char update_server[], char application[], char current_version[]) {
+esp_err_t esp_update(char update_server[], char application[], char current_version[]) {
 	char serial[SERIAL_SIZE];
 	ESP_ERROR_CHECK(get_serial_string(serial));
 
@@ -33,19 +33,19 @@ void esp_update(char update_server[], char application[], char current_version[]
 
 	if (err != ESP_OK) {
 		ESP_LOGE(TAG, "Failed to perform HTTP request: %s", esp_err_to_name(err));
-		return;
+		return err;
 	}
 
 	const int content_length = esp_http_client_fetch_headers(client);
 	if (content_length <= 0) {
 		ESP_LOGE(TAG, "HTTP request failed. Content length was %d.", content_length);
-		return;
+		return ESP_FAIL;
 	}
 
 	const int status_code = esp_http_client_get_status_code(client);
 	if (status_code < 200 || status_code > 299) {
 		ESP_LOGE(TAG, "HTTP request failed with status code %d.", status_code);
-		return;
+		return ESP_FAIL;
 	}
 	ESP_LOGI(TAG, "HTTP request succeeded with status code %d and content length %d.", status_code, content_length);
 
@@ -53,7 +53,7 @@ void esp_update(char update_server[], char application[], char current_version[]
 	int bytes_read = esp_http_client_read_response(client, response, content_length);
 	if (bytes_read != content_length) {
 		ESP_LOGE(TAG, "Expected to read %d bytes, but actually read %d.", content_length, bytes_read);
-		return;
+		return ESP_FAIL;
 	}
 	response[bytes_read] = 0;
 	ESP_LOGI(TAG, "Read response was:\n%s", response);
@@ -63,7 +63,7 @@ void esp_update(char update_server[], char application[], char current_version[]
 	}
 	else {
 		ESP_LOGE(TAG, "Response was not read or had errors.");
-		return;
+		return ESP_FAIL;
 	}
 
 	const cJSON* parsed = cJSON_Parse(response);
@@ -79,7 +79,7 @@ void esp_update(char update_server[], char application[], char current_version[]
 
 	if (semver_compare(parsed_current_version, parsed_update_version) >= 0) {
 		ESP_LOGI(TAG, "Already up to date.");
-		return;
+		return ESP_OK;
 	}
 
 	ESP_LOGI(TAG, "Not up to date. Updating...");
@@ -97,5 +97,7 @@ void esp_update(char update_server[], char application[], char current_version[]
 	}
 	else {
 		ESP_LOGE(TAG, "Firmware update failed with error %d.", err);
+		return err;
 	}
+	return ESP_OK;
 }
