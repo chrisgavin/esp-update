@@ -3,6 +3,6 @@
 
 #include <esp_err.h>
 
-esp_err_t esp_update(char update_server[], char application[], char current_version[]);
+esp_err_t esp_update(const char* update_server, const char* application, const char* current_version);
 
 #endif
