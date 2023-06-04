@@ -13,9 +13,9 @@
 #include "esp_serial.h"
 #include "semver.h"
 
-static const char *TAG = "ota";
+static const char* TAG = "ota";
 
-esp_err_t esp_update(char update_server[], char application[], char current_version[]) {
+esp_err_t esp_update(const char* update_server, const char* application, const char* current_version) {
 	char serial[SERIAL_SIZE];
 	ESP_ERROR_CHECK(get_serial_string(serial));
 
